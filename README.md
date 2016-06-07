@@ -15,6 +15,6 @@ Preview  预览
 请看Demo
 
 ## License
-UIViewController+UIBarButtonItem is provided under the MIT license. See LICENSE file for details.
+SegmentPagerController is provided under the MIT license. See LICENSE file for details.
 
 [image-1]:	https://github.com/wangcy90/SegmentPagerController/blob/master/Preview/DemoPreview.gif
