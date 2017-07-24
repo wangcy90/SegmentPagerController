@@ -4,7 +4,7 @@
 # use_frameworks!
 
 target 'SegmentPagerController' do
-	pod 'HMSegmentedControl', '~> 1.5.2'
-    pod 'Masonry', '~> 1.0.1'
+	pod 'HMSegmentedControl', '~> 1.5.4'
+    pod 'Masonry', '~> 1.0.2'
 end
 
