@@ -33,6 +33,10 @@
 
 - (void)setupUI {
     
+    self.segmentTitleColor = [self randomColor];
+    
+    self.selectionIndicatorColor = [self randomColor];
+    
     NSMutableArray *controllers = [NSMutableArray array];
     
     for (int i = 0; i < 10; i++) {

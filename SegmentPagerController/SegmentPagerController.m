@@ -13,17 +13,16 @@
 
 #import "SegmentPagerController.h"
 #import <HMSegmentedControl/HMSegmentedControl.h>
-#import <Masonry/Masonry.h>
-
-#define kFontSize 14
-#define kBackgroundColor [UIColor colorWithRed:243/255.0f green:243/255.0f blue:243/255.0f alpha:1.0f]
-#define kMainColor [UIColor colorWithRed:72/255.0f green:190/255.0f blue:216/255.0f alpha:1.0f]
 
 @interface TitleCollectionViewCell : UICollectionViewCell {
-    UIView *bgView;
+    UIView *_bgView;
 }
 
 @property(nonatomic,strong)UILabel *titleLabel;
+
+@property(nonatomic,strong)UIColor *titleColor;
+
+@property(nonatomic,strong)UIColor *selectionIndicatorColor;
 
 @property(nonatomic,assign)BOOL isSelected;
 
@@ -40,40 +39,48 @@
 
 - (void)initialize {
     
-    bgView = [[UIView alloc]init];
-    bgView.layer.masksToBounds = YES;
-    bgView.layer.cornerRadius = 5;
-    [self.contentView addSubview:bgView];
+    _bgView = [[UIView alloc]init];
+    _bgView.layer.masksToBounds = YES;
+    _bgView.layer.cornerRadius = 5;
+    _bgView.translatesAutoresizingMaskIntoConstraints = NO;
+    [self.contentView addSubview:_bgView];
     
-    [bgView makeConstraints:^(MASConstraintMaker *make) {
-        make.edges.equalTo(self.contentView).insets(UIEdgeInsetsMake(7, 15, 7, 15));
-    }];
+    [_bgView addSubview:self.titleLabel];
     
-    [bgView addSubview:self.titleLabel];
+    [self.contentView addConstraint:[NSLayoutConstraint constraintWithItem:_bgView attribute:NSLayoutAttributeTop relatedBy:NSLayoutRelationEqual toItem:self.contentView attribute:NSLayoutAttributeTop multiplier:1 constant:7]];
     
-    [self.titleLabel makeConstraints:^(MASConstraintMaker *make) {
-        make.edges.equalTo(bgView).insets(UIEdgeInsetsMake(2, 10, 2, 10));
-    }];
+    [self.contentView addConstraint:[NSLayoutConstraint constraintWithItem:_bgView attribute:NSLayoutAttributeLeft relatedBy:NSLayoutRelationEqual toItem:self.contentView attribute:NSLayoutAttributeLeft multiplier:1 constant:15]];
+    
+    [self.contentView addConstraint:[NSLayoutConstraint constraintWithItem:_bgView attribute:NSLayoutAttributeBottom relatedBy:NSLayoutRelationEqual toItem:self.contentView attribute:NSLayoutAttributeBottom multiplier:1 constant:-7]];
+    
+    [self.contentView addConstraint:[NSLayoutConstraint constraintWithItem:_bgView attribute:NSLayoutAttributeRight relatedBy:NSLayoutRelationEqual toItem:self.contentView attribute:NSLayoutAttributeRight multiplier:1 constant:-15]];
+    
+    [_bgView addConstraint:[NSLayoutConstraint constraintWithItem:_titleLabel attribute:NSLayoutAttributeTop relatedBy:NSLayoutRelationEqual toItem:_bgView attribute:NSLayoutAttributeTop multiplier:1 constant:2]];
+    
+    [_bgView addConstraint:[NSLayoutConstraint constraintWithItem:_titleLabel attribute:NSLayoutAttributeLeft relatedBy:NSLayoutRelationEqual toItem:_bgView attribute:NSLayoutAttributeLeft multiplier:1 constant:10]];
+    
+    [_bgView addConstraint:[NSLayoutConstraint constraintWithItem:_titleLabel attribute:NSLayoutAttributeBottom relatedBy:NSLayoutRelationEqual toItem:_bgView attribute:NSLayoutAttributeBottom multiplier:1 constant:-2]];
+    
+    [_bgView addConstraint:[NSLayoutConstraint constraintWithItem:_titleLabel attribute:NSLayoutAttributeRight relatedBy:NSLayoutRelationEqual toItem:_bgView attribute:NSLayoutAttributeRight multiplier:1 constant:-10]];
     
 }
 
 - (void)setIsSelected:(BOOL)isSelected {
     _isSelected = isSelected;
     if (_isSelected) {
-        bgView.backgroundColor = kMainColor;
+        _bgView.backgroundColor = _selectionIndicatorColor;
         self.titleLabel.textColor = [UIColor whiteColor];
     }else {
-        bgView.backgroundColor = [UIColor whiteColor];
-        self.titleLabel.textColor = kMainColor;
+        _bgView.backgroundColor = [UIColor whiteColor];
+        self.titleLabel.textColor = _titleColor;
     }
 }
 
 - (UILabel *)titleLabel {
     if (!_titleLabel) {
         _titleLabel = [[UILabel alloc]init];
+        _titleLabel.translatesAutoresizingMaskIntoConstraints = NO;
         _titleLabel.textAlignment = NSTextAlignmentCenter;
-        _titleLabel.textColor = kMainColor;
-        _titleLabel.font = [UIFont systemFontOfSize:kFontSize];
     }
     return _titleLabel;
 }
@@ -102,7 +109,9 @@
 
 @end
 
-@interface SegmentPagerController ()<UICollectionViewDataSource,UICollectionViewDelegate>
+@interface SegmentPagerController ()<UICollectionViewDataSource,UICollectionViewDelegate> {
+    UIView *_segmentControlContainer;
+}
 
 @property(nonatomic,strong,readwrite)HMSegmentedControl *segmentControl;
 
@@ -123,6 +132,11 @@ static NSString * const contentCollectionViewCellIdentifier = @"seg_contentColle
 - (void)viewDidLoad {
     [super viewDidLoad];
     self.view.backgroundColor = [UIColor whiteColor];
+    _segmentTitleFont = [UIFont systemFontOfSize:14];
+    _segmentTitleColor = [UIColor colorWithRed:51/255.0f green:51/255.0f blue:51/255.0f alpha:1.0f];
+    _selectionIndicatorColor = [UIColor colorWithRed:72/255.0f green:190/255.0f blue:216/255.0f alpha:1.0f];
+    _viewControllers = @[];
+    [self segmentPager_setupUI];
     // Do any additional setup after loading the view.
 }
 
@@ -135,7 +149,38 @@ static NSString * const contentCollectionViewCellIdentifier = @"seg_contentColle
     
     self.automaticallyAdjustsScrollViewInsets = NO;
     
-    [self.view.subviews makeObjectsPerformSelector:@selector(removeFromSuperview)];
+    _segmentControlContainer = [UIView new];
+    _segmentControlContainer.translatesAutoresizingMaskIntoConstraints = NO;
+    
+    [self.view addSubview:_segmentControlContainer];
+    
+    [self.view addSubview:self.contentCollectionView];
+    
+    [self.view addConstraint:[NSLayoutConstraint constraintWithItem:_segmentControlContainer attribute:NSLayoutAttributeLeft relatedBy:NSLayoutRelationEqual toItem:self.view attribute:NSLayoutAttributeLeft multiplier:1 constant:0]];
+    
+    [self.view addConstraint:[NSLayoutConstraint constraintWithItem:_segmentControlContainer attribute:NSLayoutAttributeRight relatedBy:NSLayoutRelationEqual toItem:self.view attribute:NSLayoutAttributeRight multiplier:1 constant:0]];
+    
+    [self.view addConstraint:[NSLayoutConstraint constraintWithItem:_segmentControlContainer attribute:NSLayoutAttributeHeight relatedBy:NSLayoutRelationEqual toItem:nil attribute:NSLayoutAttributeNotAnAttribute multiplier:1 constant:35]];
+    
+    if (@available(iOS 11.0, *)) {
+        [self.view addConstraint:[NSLayoutConstraint constraintWithItem:_segmentControlContainer attribute:NSLayoutAttributeTop relatedBy:NSLayoutRelationEqual toItem:self.view.safeAreaLayoutGuide attribute:NSLayoutAttributeTop multiplier:1 constant:0]];
+    } else {
+        [self.view addConstraint:[NSLayoutConstraint constraintWithItem:_segmentControlContainer attribute:NSLayoutAttributeTop relatedBy:NSLayoutRelationEqual toItem:self.topLayoutGuide attribute:NSLayoutAttributeBottom multiplier:1 constant:0]];
+    }
+    
+    [self.view addConstraint:[NSLayoutConstraint constraintWithItem:self.contentCollectionView attribute:NSLayoutAttributeTop relatedBy:NSLayoutRelationEqual toItem:_segmentControlContainer attribute:NSLayoutAttributeBottom multiplier:1 constant:0]];
+    
+    [self.view addConstraint:[NSLayoutConstraint constraintWithItem:self.contentCollectionView attribute:NSLayoutAttributeRight relatedBy:NSLayoutRelationEqual toItem:self.view attribute:NSLayoutAttributeRight multiplier:1 constant:0]];
+    
+    [self.view addConstraint:[NSLayoutConstraint constraintWithItem:self.contentCollectionView attribute:NSLayoutAttributeLeft relatedBy:NSLayoutRelationEqual toItem:self.view attribute:NSLayoutAttributeLeft multiplier:1 constant:0]];
+    
+    [self.view addConstraint:[NSLayoutConstraint constraintWithItem:self.contentCollectionView attribute:NSLayoutAttributeBottom relatedBy:NSLayoutRelationEqual toItem:self.view attribute:NSLayoutAttributeBottom multiplier:1 constant:0]];
+
+}
+
+- (void)reloadSegmentView {
+    
+    [_segmentControlContainer.subviews makeObjectsPerformSelector:@selector(removeFromSuperview)];
     
     UIView *segmentView = nil;
     
@@ -159,23 +204,19 @@ static NSString * const contentCollectionViewCellIdentifier = @"seg_contentColle
             break;
     }
     
-    [self.view addSubview:segmentView];
+    [_segmentControlContainer addSubview:segmentView];
     
-    [self.view addSubview:self.contentCollectionView];
+    [_segmentControlContainer addConstraint:[NSLayoutConstraint constraintWithItem:segmentView attribute:NSLayoutAttributeTop relatedBy:NSLayoutRelationEqual toItem:_segmentControlContainer attribute:NSLayoutAttributeTop multiplier:1 constant:0]];
     
-    [segmentView makeConstraints:^(MASConstraintMaker *make) {
-        if (self.navigationController.navigationBar.translucent) {
-            make.top.left.right.equalTo(self.view).insets(UIEdgeInsetsMake(64, 0, 0, 0));
-        }else {
-            make.top.left.right.equalTo(self.view);
-        }
-        make.height.equalTo(@35);
-    }];
+    [_segmentControlContainer addConstraint:[NSLayoutConstraint constraintWithItem:segmentView attribute:NSLayoutAttributeBottom relatedBy:NSLayoutRelationEqual toItem:_segmentControlContainer attribute:NSLayoutAttributeBottom multiplier:1 constant:0]];
     
-    [self.contentCollectionView makeConstraints:^(MASConstraintMaker *make) {
-        make.top.equalTo(segmentView.bottom);
-        make.left.right.bottom.equalTo(self.view);
-    }];
+    [_segmentControlContainer addConstraint:[NSLayoutConstraint constraintWithItem:segmentView attribute:NSLayoutAttributeLeft relatedBy:NSLayoutRelationEqual toItem:_segmentControlContainer attribute:NSLayoutAttributeLeft multiplier:1 constant:0]];
+    
+    [_segmentControlContainer addConstraint:[NSLayoutConstraint constraintWithItem:segmentView attribute:NSLayoutAttributeRight relatedBy:NSLayoutRelationEqual toItem:_segmentControlContainer attribute:NSLayoutAttributeRight multiplier:1 constant:0]];
+    
+    if ([segmentView isEqual:_titleCollectionView]) {
+        [_titleCollectionView reloadData];
+    }
     
 }
 
@@ -187,7 +228,7 @@ static NSString * const contentCollectionViewCellIdentifier = @"seg_contentColle
     
     if ([collectionView isEqual:self.titleCollectionView]) {
         NSString *title = [self.viewControllers[indexPath.row] title];
-        CGFloat titleWidth = [title boundingRectWithSize:CGSizeMake(CGFLOAT_MAX, CGFLOAT_MAX) options:NSStringDrawingUsesLineFragmentOrigin attributes:@{NSFontAttributeName: [UIFont systemFontOfSize:kFontSize]} context:nil].size.width;
+        CGFloat titleWidth = [title boundingRectWithSize:CGSizeMake(CGFLOAT_MAX, CGFLOAT_MAX) options:NSStringDrawingUsesLineFragmentOrigin attributes:@{NSFontAttributeName: _segmentTitleFont} context:nil].size.width;
         size = CGSizeMake(ceilf(titleWidth) + 50, CGRectGetHeight(collectionView.bounds));
     }else {
         size = collectionView.bounds.size;
@@ -207,6 +248,12 @@ static NSString * const contentCollectionViewCellIdentifier = @"seg_contentColle
         TitleCollectionViewCell *cell = [collectionView dequeueReusableCellWithReuseIdentifier:titleCollectionViewCellIdentifier forIndexPath:indexPath];
         
         cell.titleLabel.text = [self.viewControllers[indexPath.row] title];
+        
+        cell.titleLabel.font = _segmentTitleFont;
+        
+        cell.titleColor = _segmentTitleColor;
+        
+        cell.selectionIndicatorColor = _selectionIndicatorColor;
         
         cell.isSelected = self.currentPage == indexPath.row;
         
@@ -286,34 +333,28 @@ static NSString * const contentCollectionViewCellIdentifier = @"seg_contentColle
     self.currentPage = selectIndex;
     
     [self.contentCollectionView scrollToItemAtIndexPath:[NSIndexPath indexPathForRow:selectIndex inSection:0] atScrollPosition:UICollectionViewScrollPositionCenteredHorizontally animated:YES];
+    
 }
 
 #pragma mark - setters
 
 - (void)setViewControllers:(NSArray *)viewControllers {
-    
-    if (!_viewControllers) {
-        
+    if (_viewControllers != viewControllers) {
         _viewControllers = viewControllers;
-        
         if (_viewControllers.count) {
-            [self segmentPager_setupUI];
+            [self reloadSegmentView];
+            [self.contentCollectionView reloadData];
         }
     }
-    
 }
 
 - (void)setStyle:(SegmentPagerControlStyle)style {
-    
     if (style != SegmentPagerControlStyleDefault) {
-        
         _style = style;
-        
         if (_viewControllers.count) {
-            [self segmentPager_setupUI];
+            [self reloadSegmentView];
         }
     }
-    
 }
 
 #pragma mark - getters
@@ -330,6 +371,7 @@ static NSString * const contentCollectionViewCellIdentifier = @"seg_contentColle
 - (UICollectionView *)titleCollectionView {
     if (!_titleCollectionView) {
         _titleCollectionView = [[UICollectionView alloc]initWithFrame:CGRectZero collectionViewLayout:self.flowLayout];
+        _titleCollectionView.translatesAutoresizingMaskIntoConstraints = NO;
         _titleCollectionView.dataSource = self;
         _titleCollectionView.delegate = self;
         _titleCollectionView.showsHorizontalScrollIndicator = NO;
@@ -344,12 +386,13 @@ static NSString * const contentCollectionViewCellIdentifier = @"seg_contentColle
 - (UICollectionView *)contentCollectionView {
     if (!_contentCollectionView) {
         _contentCollectionView = [[UICollectionView alloc]initWithFrame:CGRectZero collectionViewLayout:self.flowLayout];
+        _contentCollectionView.translatesAutoresizingMaskIntoConstraints = NO;
         _contentCollectionView.dataSource = self;
         _contentCollectionView.delegate = self;
         _contentCollectionView.showsHorizontalScrollIndicator = NO;
         _contentCollectionView.showsVerticalScrollIndicator = NO;
         _contentCollectionView.pagingEnabled = YES;
-        _contentCollectionView.backgroundColor = kBackgroundColor;
+        _contentCollectionView.backgroundColor = [UIColor colorWithRed:243/255.0f green:243/255.0f blue:243/255.0f alpha:1.0f];
         [_contentCollectionView registerClass:[ContentCollectionViewCell class] forCellWithReuseIdentifier:contentCollectionViewCellIdentifier];
     }
     return _contentCollectionView;
@@ -358,14 +401,15 @@ static NSString * const contentCollectionViewCellIdentifier = @"seg_contentColle
 - (HMSegmentedControl *)segmentControl {
     if (!_segmentControl && _style == SegmentPagerControlStyleHMSegment) {
         _segmentControl = [[HMSegmentedControl alloc]init];
+        _segmentControl.translatesAutoresizingMaskIntoConstraints = NO;
         _segmentControl.selectionStyle = HMSegmentedControlSelectionStyleFullWidthStripe;
         _segmentControl.selectionIndicatorLocation = HMSegmentedControlSelectionIndicatorLocationDown;
         _segmentControl.borderType = HMSegmentedControlBorderTypeBottom;
-        _segmentControl.borderColor = kBackgroundColor;
+        _segmentControl.borderColor = [UIColor colorWithRed:243/255.0f green:243/255.0f blue:243/255.0f alpha:1.0f];
         _segmentControl.selectionIndicatorHeight = 2.0f;
-        _segmentControl.selectionIndicatorColor = kMainColor;
-        _segmentControl.titleTextAttributes = @{NSFontAttributeName : [UIFont systemFontOfSize:kFontSize],NSForegroundColorAttributeName : [UIColor colorWithRed:51/255.0f green:51/255.0f blue:51/255.0f alpha:1.0f]};
-        _segmentControl.selectedTitleTextAttributes = @{NSFontAttributeName : [UIFont systemFontOfSize:kFontSize],NSForegroundColorAttributeName : kMainColor};
+        _segmentControl.selectionIndicatorColor = _selectionIndicatorColor;
+        _segmentControl.titleTextAttributes = @{NSFontAttributeName : _segmentTitleFont,NSForegroundColorAttributeName : _segmentTitleColor};
+        _segmentControl.selectedTitleTextAttributes = @{NSFontAttributeName : _segmentTitleFont,NSForegroundColorAttributeName : _selectionIndicatorColor};
         [_segmentControl addTarget:self action:@selector(segmentControlChangedValue:) forControlEvents:UIControlEventValueChanged];
     }
     return _segmentControl;

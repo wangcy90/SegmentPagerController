@@ -11,7 +11,7 @@
 //  Copyright © 2016年 WangChongyang. All rights reserved.
 //
 
-#import "SegmentPagerController.h"
+#import <SegmentPagerController/SegmentPagerController.h>
 
 @interface DemoViewController : SegmentPagerController
 

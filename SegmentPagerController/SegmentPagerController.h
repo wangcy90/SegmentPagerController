@@ -28,6 +28,12 @@ typedef NS_ENUM(NSInteger,SegmentPagerControlStyle) {
 
 @property(nonatomic,strong,readonly)UICollectionView *contentCollectionView;
 
+@property(nonatomic,strong)UIFont *segmentTitleFont;
+
+@property(nonatomic,strong)UIColor *segmentTitleColor;
+
+@property(nonatomic,strong)UIColor *selectionIndicatorColor;
+
 @property(nonatomic,strong)NSArray *viewControllers;
 
 @end
